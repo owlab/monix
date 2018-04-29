@@ -315,7 +315,7 @@ import scala.util.{Failure, Success, Try}
   *
   * @define optionsDesc a set of [[monix.eval.Task.Options Options]]
   *         that determine the behavior of Task's run-loop.
-  *         
+  *
   * @define startInspiration Inspired by
   *         [[https://github.com/functional-streams-for-scala/fs2 FS2]],
   *         with the difference that this method does not fork
@@ -1167,12 +1167,12 @@ sealed abstract class Task[+A] extends Serializable {
     *     loop(n, 0, 1).cancelable
     *   }
     * }}}
-    * 
+    *
     * Normally this isn't cancelable and it might take a long time, but
     * by calling `cancelable` on the result, we ensure that when cancellation
     * is observed, at async boundaries, the loop will stop with the task
     * becoming a non-terminating one.
-    * 
+    *
     * This operation represents the opposite of [[uncancelable]]. And note
     * that it works even for tasks that are uncancelable / atomic, because
     * it blocks the rest of the `flatMap` loop from executing, functioning
@@ -2245,6 +2245,15 @@ object Task extends TaskInstancesLevel1 {
   def gather[A, M[X] <: TraversableOnce[X]](in: M[Task[A]])
     (implicit cbf: CanBuildFrom[M[Task[A]], A, M[A]]): Task[M[A]] =
     TaskGather[A, M](in, () => cbf(in))
+
+  def gatherOrdered[A, M[X] <: TraversableOnce[X]](in: M[Task[A]]) = {
+    val indexedTasks = in.toSeq.zipWithIndex
+      .map { case (task, idx) => task.map { a => (idx, a)}}
+    val unorderedResults = TaskGatherUnordered(indexedTasks)
+    val orderedResults = unorderedResults.map { results => results.sortBy(_._1).map(_._2)}
+
+    orderedResults
+  }
 
    /** Given a `TraversableOnce[A]` and a function `A => Task[B]`,
    * nondeterministically apply the function to each element of the collection
