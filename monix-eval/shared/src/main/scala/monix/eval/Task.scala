@@ -2246,11 +2246,10 @@ object Task extends TaskInstancesLevel1 {
     (implicit cbf: CanBuildFrom[M[Task[A]], A, M[A]]): Task[M[A]] =
     TaskGather[A, M](in, () => cbf(in))
 
-  def gatherOrdered[A, M[X] <: TraversableOnce[X]](in: M[Task[A]]) = {
-    val indexedTasks = in.toSeq.zipWithIndex
-      .map { case (task, idx) => task.map { a => (idx, a)}}
-    val unorderedResults = TaskGatherUnordered(indexedTasks)
-    val orderedResults = unorderedResults.map { results => results.sortBy(_._1).map(_._2)}
+  def gatherOrdered[A, M[X] <: TraversableOnce[X]](in: M[Task[A]]): Task[List[A]] = {
+    val indexedTasks = in.toSeq.zipWithIndex.map { case (task, idx) => task.map { a => (idx, a)}}
+    val unOrderedResults = TaskGatherUnordered(indexedTasks)
+    val orderedResults = unOrderedResults.map { results => results.sortBy(_._1).map(_._2)}
 
     orderedResults
   }
